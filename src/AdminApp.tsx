@@ -11,7 +11,7 @@ import {
 type AdminPage = 'dashboard' | 'tables' | 'orders' | 'menu' | 'stock' | 'billing' | 'kitchen' | 'notifications'
 
 export default function AdminApp() {
-  const [loggedIn, setLoggedIn] = useState(isAdminLoggedIn)
+  const [loggedIn, setLoggedIn] = useState(true) // Demo: skip login
   const [user, setUser] = useState('')
   const [pass, setPass] = useState('')
   const [loginErr, setLoginErr] = useState(false)
