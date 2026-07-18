@@ -1,6 +1,7 @@
 const { Pool } = require('pg')
 
 let pool
+let dbReady = false
 
 function getPool() {
   if (!pool) {
@@ -12,8 +13,8 @@ function getPool() {
   return pool
 }
 
-// Auto-setup tables
 async function setupDB() {
+  if (dbReady) return
   const p = getPool()
   await p.query(`
     CREATE TABLE IF NOT EXISTS orders (
@@ -46,8 +47,7 @@ async function setupDB() {
       price INTEGER NOT NULL
     );
   `)
+  dbReady = true
 }
 
-let dbReady = false
-
-module.exports = { getPool, setupDB, isReady: () => dbReady, setReady: () => { dbReady = true } }
+module.exports = { getPool, setupDB }
