@@ -101,20 +101,6 @@ function App() {
     }
   }, [])
 
-  // Restart alarm when user comes back to the app (after pressing home key)
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && screen === 'waiting') {
-        const s = localStorage.getItem(`pos_status_${tableId}`)
-        if (s === 'cooked' || s === 'ready') {
-          if (!alarmRef.current) startAlarm()
-        }
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [screen, tableId])
-
   const [lang, setLang] = useState<'en' | 'mm'>('en')
   const [activeCat, setActiveCat] = useState(categories[0].id)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -236,6 +222,21 @@ function App() {
       await setTableStatus(tableId, 'free')
     } catch(e) {}
   }
+
+  // Restart alarm when user comes back to the app (after pressing home key)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && screen === 'waiting') {
+        const s = localStorage.getItem(`pos_status_${tableId}`)
+        if (s === 'cooked' || s === 'ready') {
+          if (!alarmRef.current) startAlarm()
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [screen, tableId])
+
   useEffect(() => {
     if (screen !== 'waiting') return
     let prevStatus = ''
