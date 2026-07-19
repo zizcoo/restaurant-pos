@@ -86,12 +86,49 @@ function App() {
   // Set table to 'ordering' when customer scans QR
   useEffect(() => { setTableStatus(tableId, 'ordering') }, [tableId])
 
+  // Request notification permission on load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
   const [lang, setLang] = useState<'en' | 'mm'>('en')
   const [activeCat, setActiveCat] = useState(categories[0].id)
   const [cart, setCart] = useState<CartItem[]>([])
-  const [screen, setScreen] = useState<Screen>('menu')
+  // Recover screen & orderNo from localStorage (survives cache clear)
+  const [screen, setScreen] = useState<Screen>(() => {
+    const saved = localStorage.getItem(`pos_screen_${tableId}`)
+    return (saved === 'waiting' || saved === 'cash_pending') ? saved as Screen : 'menu'
+  })
   const [payMethod, setPayMethod] = useState<'QR_PAY' | 'CASH'>('QR_PAY')
-  const [orderNo, setOrderNo] = useState(() => 'ORD-' + Date.now().toString().slice(-6))
+  const [orderNo, setOrderNo] = useState(() => {
+    const saved = localStorage.getItem(`pos_order_${tableId}`)
+    return saved || 'ORD-' + Date.now().toString().slice(-6)
+  })
+
+  // Save screen & orderNo to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(`pos_screen_${tableId}`, screen)
+    localStorage.setItem(`pos_order_${tableId}`, orderNo)
+  }, [screen, orderNo, tableId])
+
+  // Auto-recover: on load, check DB for active orders for this table
+  useEffect(() => {
+    const recover = async () => {
+      try {
+        const orders = await getOrders()
+        const active = orders.find((o: any) => o.table_id === tableId && ['pending', 'approved', 'preparing', 'cooked'].includes(o.status))
+        if (active) {
+          setOrderNo(active.id)
+          if (active.status === 'pending') setScreen('cash_pending')
+          else setScreen('waiting')
+          setLiveStatus(active.status)
+        }
+      } catch(e) {}
+    }
+    recover()
+  }, [tableId])
 
   // Detail modal state
   const [detailItem, setDetailItem] = useState<MenuItem | null>(null)
@@ -159,10 +196,25 @@ function App() {
   }
   useEffect(() => {
     if (screen !== 'waiting') return
+    let prevStatus = ''
     const poll = async () => { try {
       const orders = await getOrders()
       const my = orders.find((o: any) => o.id === orderNo)
-      if (my) setLiveStatus(my.status)
+      if (my) {
+        setLiveStatus(my.status)
+        // Send Web Notification when food is ready (works even when phone home pressed)
+        if ((my.status === 'cooked' || my.status === 'ready') && prevStatus !== my.status) {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🍽️ Your food is ready!', {
+              body: `Table ${tableId} — Order ${orderNo} is ready for pickup!`,
+              icon: '🍽️',
+              tag: 'food-ready',
+              requireInteraction: true,
+            })
+          }
+        }
+        prevStatus = my.status
+      }
     } catch(e) {} }
     poll()
     const id = setInterval(poll, 1500)
@@ -593,9 +645,13 @@ function App() {
             <p style={{ color: '#6B7280', marginBottom: 32 }}>{n('Thank you for ordering', 'မှာယူပေးသည့်အတွက် ကျေးဇူးတင်ပါသည်')}</p>
             <button onClick={() => {
               setCart([])
-              setOrderNo('ORD-' + Math.random().toString().slice(2, 8))
+              const newId = 'ORD-' + Math.random().toString().slice(2, 8)
+              setOrderNo(newId)
               setLiveStatus('pending')
               setScreen('menu')
+              // Clear saved order state
+              localStorage.removeItem(`pos_screen_${tableId}`)
+              localStorage.removeItem(`pos_order_${tableId}`)
             }} style={{
               width: '100%', padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 800,
               background: 'linear-gradient(135deg, #22C55E, #15803D)', color: 'white',
