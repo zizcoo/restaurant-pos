@@ -86,12 +86,34 @@ function App() {
   // Set table to 'ordering' when customer scans QR
   useEffect(() => { setTableStatus(tableId, 'ordering') }, [tableId])
 
-  // Request notification permission on load
+  // Request notification permission + register Service Worker
+  const swRef = useRef<ServiceWorkerRegistration | null>(null)
   useEffect(() => {
+    // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
     }
+    // Register service worker for background notifications
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        swRef.current = reg
+      }).catch(() => {})
+    }
   }, [])
+
+  // Restart alarm when user comes back to the app (after pressing home key)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && screen === 'waiting') {
+        const s = localStorage.getItem(`pos_status_${tableId}`)
+        if (s === 'cooked' || s === 'ready') {
+          if (!alarmRef.current) startAlarm()
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [screen, tableId])
 
   const [lang, setLang] = useState<'en' | 'mm'>('en')
   const [activeCat, setActiveCat] = useState(categories[0].id)
@@ -207,6 +229,8 @@ function App() {
     if (alarmRef.current) { clearInterval(alarmRef.current); alarmRef.current = null }
     setAlarmPlaying(false)
     setLiveStatus('served')
+    localStorage.setItem(`pos_status_${tableId}`, 'served')
+    if (navigator.vibrate) navigator.vibrate(0) // stop vibration
     try {
       await updateOrderStatus(orderNo, 'served')
       await setTableStatus(tableId, 'free')
@@ -220,14 +244,21 @@ function App() {
       const my = orders.find((o: any) => o.id === orderNo)
       if (my) {
         setLiveStatus(my.status)
-        // Send Web Notification when food is ready (works even when phone home pressed)
+        // Save status to localStorage (for alarm restart on visibility change)
+        localStorage.setItem(`pos_status_${tableId}`, my.status)
+
+        // Send notification when food is ready
         if ((my.status === 'cooked' || my.status === 'ready') && prevStatus !== my.status) {
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('🍽️ Your food is ready!', {
+          // Vibrate phone
+          if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300, 100, 300])
+
+          // Use Service Worker notification (works in background!)
+          if (swRef.current && Notification.permission === 'granted') {
+            swRef.current.showNotification('🍽️ Your food is ready!', {
               body: `Table ${tableId} — Order ${orderNo} is ready for pickup!`,
-              icon: '🍽️',
-              tag: 'food-ready',
+              tag: 'food-ready-' + orderNo,
               requireInteraction: true,
+              vibrate: [300, 100, 300, 100, 300, 100, 300],
             })
           }
         }
