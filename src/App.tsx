@@ -121,6 +121,8 @@ function App() {
         const active = orders.find((o: any) => o.table_id === tableId && ['pending', 'approved', 'preparing', 'cooked'].includes(o.status))
         if (active) {
           setOrderNo(active.id)
+          setSavedTotal(active.total || 0)
+          localStorage.setItem(`pos_total_${tableId}`, String(active.total || 0))
           if (active.status === 'pending') setScreen('cash_pending')
           else setScreen('waiting')
           setLiveStatus(active.status)
@@ -141,6 +143,22 @@ function App() {
   const totalAmount = cart.reduce((s, c) => s + c.unitTotal * c.qty, 0)
   const cartQty = (id: number) => cart.filter(c => c.item.id === id).reduce((s, c) => s + c.qty, 0)
   const n = (en: string, mm: string) => lang === 'en' ? en : mm
+
+  // Saved total for recovery (survives page reload/cache clear)
+  const [savedTotal, setSavedTotal] = useState(() => {
+    const s = localStorage.getItem(`pos_total_${tableId}`)
+    return s ? parseInt(s) : 0
+  })
+  // The display total: use cart total if cart has items, otherwise use saved total from DB
+  const displayTotal = totalAmount > 0 ? totalAmount : savedTotal
+
+  // Save total when it changes
+  useEffect(() => {
+    if (totalAmount > 0) {
+      setSavedTotal(totalAmount)
+      localStorage.setItem(`pos_total_${tableId}`, String(totalAmount))
+    }
+  }, [totalAmount, tableId])
 
   // Out of stock items (synced from admin)
   const outOfStock = useOutOfStock()
@@ -537,7 +555,7 @@ function App() {
           <div style={{ borderTop: '1px dashed #E5E7EB', margin: '8px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
             <span style={{ color: '#6B7280', fontSize: 14 }}>{n('Total (Cash)', 'စုစုပေါင်း (ငွေသား)')}</span>
-            <span style={{ fontWeight: 900, color: '#D97706', fontSize: 22 }}>{formatMMK(totalAmount)}</span>
+            <span style={{ fontWeight: 900, color: '#D97706', fontSize: 22 }}>{formatMMK(displayTotal)}</span>
           </div>
         </div>
 
@@ -574,10 +592,10 @@ function App() {
   // ─── LIVE ORDER TRACKER ──────────────────────────────────────
   if (screen === 'waiting') {
     // Start alarm when food is ready for pickup
-    if (liveStatus === 'ready' && !alarmPlaying) { startAlarm() }
+    if ((liveStatus === 'ready' || liveStatus === 'cooked') && !alarmPlaying) { startAlarm() }
 
     // PICKUP SCREEN — alarm ringing, customer picks up food
-    if (liveStatus === 'ready') {
+    if (liveStatus === 'ready' || liveStatus === 'cooked') {
       return (
         <div style={{
           minHeight: '100vh', display: 'flex', flexDirection: 'column',
@@ -652,6 +670,8 @@ function App() {
               // Clear saved order state
               localStorage.removeItem(`pos_screen_${tableId}`)
               localStorage.removeItem(`pos_order_${tableId}`)
+              localStorage.removeItem(`pos_total_${tableId}`)
+              setSavedTotal(0)
             }} style={{
               width: '100%', padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 800,
               background: 'linear-gradient(135deg, #22C55E, #15803D)', color: 'white',
