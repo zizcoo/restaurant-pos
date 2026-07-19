@@ -760,7 +760,7 @@ function App() {
             <div style={{ borderTop: '1px dashed #E5E7EB', margin: '8px 0' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#6B7280', fontSize: 14 }}>{n('Total', 'စုစုပေါင်း')}</span>
-              <span style={{ fontWeight: 900, color: '#15803D', fontSize: 20 }}>{formatMMK(totalAmount)}</span>
+              <span style={{ fontWeight: 900, color: '#15803D', fontSize: 20 }}>{formatMMK(displayTotal)}</span>
             </div>
           </div>
 
@@ -824,7 +824,7 @@ function App() {
           <div style={{ borderTop: '1px dashed #E5E7EB', margin: '12px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: '#6B7280' }}>{n('Total', 'စုစုပေါင်း')}</span>
-            <span style={{ fontSize: 24, fontWeight: 900, color: '#15803D' }}>{formatMMK(totalAmount)}</span>
+            <span style={{ fontSize: 24, fontWeight: 900, color: '#15803D' }}>{formatMMK(displayTotal)}</span>
           </div>
         </div>
         <div className="card" style={{ padding: 20, marginBottom: 20 }}>
@@ -909,7 +909,7 @@ function App() {
         <div style={{ borderTop: '1px dashed #E5E7EB', margin: '8px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
           <span style={{ color: '#6B7280' }}>{n('Total', 'စုစုပေါင်း')}</span>
-          <span style={{ fontSize: 24, fontWeight: 900, color: '#15803D' }}>{formatMMK(totalAmount)}</span>
+          <span style={{ fontSize: 24, fontWeight: 900, color: '#15803D' }}>{formatMMK(displayTotal)}</span>
         </div>
       </div>
       <button onClick={() => setScreen('payment')} className="btn-green" style={{ width: '100%', padding: 16, fontSize: 16, marginBottom: 10 }}>{n('✓ Place Order', '✓ အတည်ပြုမည်')}</button>
@@ -969,7 +969,7 @@ function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <p style={{ color: '#6B7280', fontSize: 14 }}>{n('Total', 'စုစုပေါင်း')} ({totalItems} {n('items', 'ခု')})</p>
-                <p style={{ fontSize: 24, fontWeight: 900, color: '#15803D' }}>{formatMMK(totalAmount)}</p>
+                <p style={{ fontSize: 24, fontWeight: 900, color: '#15803D' }}>{formatMMK(displayTotal)}</p>
               </div>
               <button onClick={() => setScreen('confirm')} className="btn-green" style={{ padding: '12px 20px' }}>{n('Order Now →', 'အော်ဒါ →')}</button>
             </div>
